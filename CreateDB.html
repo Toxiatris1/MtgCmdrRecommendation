@@ -35,7 +35,7 @@
 					contentType: "application/json",
 					data: JSON.stringify(query),
 					beforeSend: function (xhr) {
-						xhr.setRequestHeader("Authorization", "Basic " + btoa("neo4j:!2Simple"));
+						xhr.setRequestHeader("Authorization", "Basic " + btoa("USER:PASSWORD"));
 					},
 					success: function (data) {
 					}

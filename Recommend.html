@@ -1,0 +1,118 @@
+<html>
+<head>
+	<script src="https://code.jquery.com/jquery-3.1.1.min.js"
+				integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+				crossorigin="anonymous"></script>
+					
+	<style>
+		img{
+			padding: 5px;
+		}
+	</style>
+		
+	<script>
+		$(document).ready(function()
+		{
+			for (i = 0; i < 6; i++)
+			{
+				var img = $('<img \>' ,
+				{
+					id: 'CommanderImg'+i
+				});
+				img.appendTo('center');
+				if(i == 0)
+					$('<br>').appendTo('center');
+			}
+			var query = {
+				"statements": [{
+					"statement": "match (c:Commander) return c.name order by c.name"
+				}]
+			};
+			
+			var neoRequest = $.ajax({
+					type: "POST",
+					url: "http://52.41.97.117:7474/db/data/transaction/commit",
+					accepts: { json: "application/json" },
+					dataType: "json",
+					contentType: "application/json",
+					data: JSON.stringify(query),
+					beforeSend: function (xhr) {
+						xhr.setRequestHeader("Authorization", "Basic " + btoa("neo4j:!2Simple"));
+					},
+					success: function (data) {
+						var results = data.results[0].data;
+						var nameSelector = document.getElementById("nameSelector");
+						
+						for (var i = 0; i < results.length; i++) {
+							var name = results[i].row[0];
+							var option = document.createElement("option");
+							option.text = name;
+							nameSelector.appendChild(option);
+						}
+						Query();
+					}
+					,error:function(xhr,err,msg){
+						  console.log(xhr);
+						  console.log(err);
+						  console.log(msg);
+				}
+				});
+		});
+			
+			
+		function deckBrewQuery(_name, i)
+		{
+			$.getJSON('https://api.deckbrew.com/mtg/cards?name=' + _name, function(data)
+			{
+				if (data[0].editions[0].image_url != 'https://image.deckbrew.com/mtg/multiverseid/0.jpg')
+					$('#CommanderImg'+i).attr('src', data[0].editions[0].image_url);
+				else
+					$('#CommanderImg'+i).attr('src', data[0].editions[1	].image_url);
+			});
+		}
+		
+		function Query()
+		{
+			var nameSelector = document.getElementById("nameSelector");
+			var selectedName =nameSelector.options[nameSelector.selectedIndex].text;
+					
+			var query = {
+				"statements": [{
+					"statement": "MATCH (a:Commander { name: \"" + selectedName +"\"})-[*]->(b)<-[*]-(c:Commander) RETURN count(c) as cnt, collect(b.name), c order by cnt desc LIMIT 5"
+				}]
+			};
+
+			var neoRequest = $.ajax({
+				type: "POST",
+				url: "http://52.41.97.117:7474/db/data/transaction/commit",
+				accepts: { json: "application/json" },
+				dataType: "json",
+				contentType: "application/json",
+				data: JSON.stringify(query),
+				beforeSend: function (xhr) {
+					xhr.setRequestHeader("Authorization", "Basic " + btoa("neo4j:!2Simple"));
+				},
+				success: function (data) {
+					var results = data.results[0].data;
+					deckBrewQuery(selectedName, 0);
+					for (var i = 0; i < results.length; i++)
+					{
+						deckBrewQuery(results[i].row[2].name, i+1);
+					}
+				}
+				,error:function(xhr,err,msg){
+					  console.log(xhr);
+					  console.log(err);
+					  console.log(msg);
+			}
+			});
+		}
+	</script>
+</head>
+<body>
+	<select id="nameSelector" onchange="Query()"></select>
+	<br><br>
+	<center>
+	</cemter>
+</body>
+</html>

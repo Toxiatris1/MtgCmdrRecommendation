@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+			body {
+				width: 100%;
+				height: 100%;
+			}
+			textarea {
+				width: 75%;
+				height: 100%;
+			}
+		</style>
+		
+		<title>DB thing</title>
+		
+		<script src="https://code.jquery.com/jquery-3.1.1.min.js"
+				integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+				crossorigin="anonymous"></script>
+				
+		<script>
+			function Query(query)
+			{
+				var query = {
+					"statements": [{
+						"statement": query
+					}]
+				};
+
+				var request = $.ajax({
+					type: "POST",
+					url: "http://52.41.97.117:7474/db/data/transaction/commit",
+					accepts: { json: "application/json" },
+					dataType: "json",
+					contentType: "application/json",
+					data: JSON.stringify(query),
+					beforeSend: function (xhr) {
+						xhr.setRequestHeader("Authorization", "Basic " + btoa("neo4j:!2Simple"));
+					},
+					success: function (data) {
+					}
+				});
+			}
+			
+			function CreateCMCNodes()
+			{
+				var Output = '';
+				for(i = 0; i < 16; i++)
+				{
+					var _cmc = 'merge (c:Cmc {name: ' + i + '})';
+					Output += _cmc + '\n';
+					Query(_cmc);
+				}
+				$('#Output').html(Output);
+			}
+			
+			function CreatePowerNodes()
+			{
+				var Output = '';
+				for(i = 0; i < 16; i++)
+				{
+					var _power = 'merge (p:Power {name: ' + i + '})';
+					
+					Output += _power + '\n';
+					Query(_power);
+				}
+				$('#Output').html(Output);
+			}
+			
+			function CreateToughnessNodes()
+			{
+				var Output = '';
+				for(i = 0; i < 16; i++)
+				{
+					var _toughness = 'merge (t:Toughness {name: ' + i + '})';
+					
+					Output += _toughness + '\n';
+					Query(_toughness);
+				}
+				$('#Output').html(Output);
+			}
+			
+			function CreateColorNodes()
+			{
+				var _colors = ["Red", "Blue", "Black", "White", "Green"];
+				var Output = '';
+				
+				_colors.forEach(function(i)
+				{
+					var _color = 'merge (c:Color {name: \"' + i + '\"})'
+					Output += _color + '\n';
+					Query(_color);
+				});
+				$('#Output').html(Output);
+			}
+			
+			function CreateCommanderNodes()
+			{
+				$.getJSON('https://mtgjson.com/json/AllCards.json', function(json)
+				{
+					var Output = "";
+					$.each(json, function(Name, Attr) 
+					{
+						var type = Attr.types;
+						var supertype = Attr.supertypes;
+						
+						if (type == 'Creature' && supertype == 'Legendary')
+						{
+							var _query = 'merge (c:Commander {name: \"' + Name + '\"';
+							
+							if (Attr.manaCost != null)
+							{
+								_query += ', manaCost: \"' + Attr.manaCost + '\"';
+							}
+							
+							if (Attr.cmc != null)
+							{
+								_query += ', cmc: ' + Attr.cmc;
+							}
+							
+							if (Attr.power != null)
+							{
+								_query += ', power: ' + Attr.power;
+							}
+							
+							if (Attr.toughness != null)
+							{
+								_query += ', toughness: ' + Attr.toughness;
+							}
+							
+							if (Attr.colors != null)
+							{
+								_query += ', colors: [';
+								var colors = Attr.colors;
+								for(i = 0; i < colors.length; i++)
+								{
+									if (i == colors.length - 1)
+									{
+										_query += '\"' + colors[i] + '\"';
+									}
+									else
+									{
+										_query += '\"' + colors[i] + '\",';
+									}
+								}
+								_query += ']';
+							}
+							
+							_query += '})';
+							Output += _query + '\n';
+							Query(_query);
+							
+							var cmc = 'MATCH (n:Commander {name: \"' + Attr.name + '\"}),(c:Cmc {name: n.cmc}) merge (n)-[:Has_CMC]->(c)';
+							Query(cmc);
+							var power = 'MATCH (n:Commander {name: \"' + Attr.name + '\"}),(c:Power {name: n.power}) merge (n)-[:Has_Power]->(c)';
+							Query(power);
+							var toughness = 'MATCH (n:Commander {name: \"' + Attr.name + '\"}),(c:Toughness {name: n.toughness}) merge (n)-[:Has_Toughness]->(c)';
+							Query(toughness);
+							if (Attr.colors != null)
+							{
+								for (i = 0; i < Attr.colors.length; i++)
+								{
+									var color = 'MATCH (n:Commander {name: \"' + Attr.name + '\"}),(c:Color {name: n.colors[' + i + ']}) merge (n)-[:Has_Color]->(c)';
+									Query(color);
+									Output += cmc + '\n' + power + '\n' + toughness + '\n' + color + '\n';
+								}
+							}
+							
+						}
+					});
+					$("#Output").html(Output);
+				});
+			}
+		</script>
+	</head>
+	<body>
+		<h2>MTG Commander Neo4J DB Creator</h2>
+		
+		<button onclick='CreateCMCNodes()'>CMC Nodes</button>
+		<br>
+		<button onclick='CreatePowerNodes()'>Power Nodes</button>
+		<br>
+		<button onclick='CreateToughnessNodes()'>Toughness Nodes</button>
+		<br>
+		<button onclick='CreateColorNodes()'>Color Nodes</button>
+		<br>
+		<button onclick='CreateCommanderNodes()'>Commander Nodes</button>
+		<br>
+		
+		<textarea id='Output' rows='50'></textarea>
+	</body>
+</html>

@@ -5,6 +5,13 @@
 				crossorigin="anonymous"></script>
 					
 	<style>
+		#CommanderDiv0{
+			width: 100%;
+		}
+		div{
+			width: 20%;
+			float: left;
+		}
 		img{
 			padding: 5px;
 		}
@@ -15,14 +22,23 @@
 		{
 			for (i = 0; i < 6; i++)
 			{
+				var _div = $('<div \>', 
+				{
+					id: 'CommanderDiv'+i
+				});
+				
 				var img = $('<img \>' ,
 				{
 					id: 'CommanderImg'+i
 				});
-				img.appendTo('center');
+				
+				img.appendTo(_div);
+				_div.appendTo('center');
+				
 				if(i == 0)
 					$('<br>').appendTo('center');
 			}
+			
 			var query = {
 				"statements": [{
 					"statement": "match (c:Commander) return c.name order by c.name"
@@ -37,7 +53,7 @@
 					contentType: "application/json",
 					data: JSON.stringify(query),
 					beforeSend: function (xhr) {
-						xhr.setRequestHeader("Authorization", "Basic " + btoa("USER:PASSWORD"));
+						xhr.setRequestHeader("Authorization", "Basic " + btoa("neo4j:!2Simple"));
 					},
 					success: function (data) {
 						var results = data.results[0].data;
@@ -78,7 +94,7 @@
 					
 			var query = {
 				"statements": [{
-					"statement": "MATCH (a:Commander { name: \"" + selectedName +"\"})-[*]->(b)<-[*]-(c:Commander) RETURN count(c) as cnt, collect(b.name), c order by cnt desc LIMIT 5"
+					"statement": "MATCH (a:Commander { name: \"" + selectedName +"\"})-[*]->(b)<-[*]-(c:Commander) RETURN count(c) as cnt, collect(b), c order by cnt desc LIMIT 5"
 				}]
 			};
 
@@ -95,9 +111,23 @@
 				success: function (data) {
 					var results = data.results[0].data;
 					deckBrewQuery(selectedName, 0);
+					
+					$('p').remove();
+					
 					for (var i = 0; i < results.length; i++)
 					{
 						deckBrewQuery(results[i].row[2].name, i+1);
+						
+						var sims = "<p>Similarities: ";
+						for (var j = 0; j < results[i].row[1].length; j++)
+						{
+							sims += results[i].row[1][j].name + ', ';
+						}
+						sims += '</p>';
+						var k = i + 1;
+						$('#CommanderDiv'+k).append(sims);
+						
+						
 					}
 				}
 				,error:function(xhr,err,msg){
@@ -110,9 +140,8 @@
 	</script>
 </head>
 <body>
-	<select id="nameSelector" onchange="Query()"></select>
-	<br><br>
 	<center>
-	</cemter>
+	<select id="nameSelector" onchange="Query()"></select><br><br>
+	</center>
 </body>
 </html>
